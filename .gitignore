@@ -1,0 +1,14 @@
+# MacOS
+*.DS_Store 
+
+# ppt
+~$*.pptx
+
+# jupyter-notebooks
+*.ipynb_checkpoints
+
+#vscode
+*.vscode
+
+# processed data 
+data_processed/*
