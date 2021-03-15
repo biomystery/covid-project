@@ -1,0 +1,14 @@
+
+#From bioconductor BiocManager
+ComplexHeatmap #BiocManager::install("ComplexHeatmap"),after r-cairo
+
+#install.packages
+tidyverse
+
+
+#conda-forge
+r-gridgraphics
+r-cairo
+
+# r channel 
+r-tidyverse
