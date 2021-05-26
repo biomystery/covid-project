@@ -12,3 +12,6 @@
 
 # processed data 
 data_processed/*
+
+# other 
+*/PCA_Plots
