@@ -19,4 +19,5 @@ data_processed/*
 # other 
 */PCA_Plots
 *.Rhistory
+*.RData
 
