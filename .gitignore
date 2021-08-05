@@ -9,7 +9,9 @@
 
 # python 
 */__pycache__
-
+*.p 
+*.csv 
+*
 #vscode
 *.vscode
 
