@@ -1,0 +1,7 @@
+number_of_bootstrapping: 10  # default value of type "int". (optional)
+input_label:  # type "File"
+    class: File
+    path: ../dockers/py3-ml/test/y.csv  
+input_expression_matrix:  # type "File"
+    class: File
+    path: ../dockers/py3-ml/test/X.csv  
