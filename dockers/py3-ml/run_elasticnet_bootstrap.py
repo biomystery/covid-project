@@ -7,8 +7,7 @@ import argparse
 import os
 
 
-
-DATE = lambda: datetime.datetime.now().strftime("[%m/%d/%Y %H:%M:%S]")
+def DATE(): return datetime.datetime.now().strftime("[%m/%d/%Y %H:%M:%S]")
 
 
 def tune_elasticnet(X_train_, y_train_, rand_seed_, log_grid_, n_core=6):
@@ -33,25 +32,33 @@ def tune_elasticnet(X_train_, y_train_, rand_seed_, log_grid_, n_core=6):
 
 
 ########################################################################
-## read input 
+# read input
 ########################################################################
 def get_args():
     """
     process the input arguments 
     """
-    parser = argparse.ArgumentParser(description='Train a Logit ElasticNet regression on the input expression matrix via bootstrapping.')
-    parser.add_argument('-ix','--input-x-matrix', help='input X, i.e. data matrix for training (row - genes, column - sample)',required=True)
-    #- init_seed: 
-    parser.add_argument('-iy','--input-y-label', help='input sample labels (y)',required=True)
-    parser.add_argument('-is','--init_seed', help='initial random seed to start bootstrapping ',required=False, default= 200)
-    parser.add_argument('-nb','--number_of_bootstrapping', help='Number of bootstrapping',required=False, default= 100, type=int)
-    parser.add_argument('-tr','--test_set_ratio', help='Test set ratio in test/training split',required=False, default= 0.2,)
-    parser.add_argument('-fs','--feature_selection_threshold', help='fraction of bootstrap for final feature',required=False, default= 0.9)
+    parser = argparse.ArgumentParser(
+        description='Train a Logit ElasticNet regression on the input expression matrix via bootstrapping.')
+    parser.add_argument('-ix', '--input-x-matrix',
+                        help='input X, i.e. data matrix for training (row - genes, column - sample)', required=True)
+    # - init_seed:
+    parser.add_argument('-iy', '--input-y-label',
+                        help='input sample labels (y)', required=True)
+    parser.add_argument(
+        '-is', '--init_seed', help='initial random seed to start bootstrapping ', required=False, default=200)
+    parser.add_argument('-nb', '--number_of_bootstrapping',
+                        help='Number of bootstrapping', required=False, default=100, type=int)
+    parser.add_argument('-tr', '--test_set_ratio',
+                        help='Test set ratio in test/training split', required=False, default=0.2,)
+    parser.add_argument('-fs', '--feature_selection_threshold',
+                        help='fraction of bootstrap for final feature', required=False, default=0.9)
 
-    parser.add_argument('-s','--save_result_object', help='Save result object to disk using pickle',required=False, default= True,type=bool)    
+    parser.add_argument('-s', '--save_result_object',
+                        help='Save result object to disk using pickle', required=False, default=True, type=bool)
 
-    args=parser.parse_args()
-    return args 
+    args = parser.parse_args()
+    return args
 
 
 def read_data(args):
@@ -64,15 +71,16 @@ def read_data(args):
     y['label'].value_counts()
 
     X = pd.read_csv(args.input_x_matrix, index_col=0).T
-    print(X.shape)    
-    if not all(X.index == y.index): raise("inputError: X and y don't match!")
-    return X,y
+    print(X.shape)
+    if not all(X.index == y.index):
+        raise ("inputError: X and y don't match!")
+    return X, y
 
 
 ########################################################################
-## bootstrap: preparing 
+# bootstrap: preparing
 ########################################################################
-def prepare_bootstrap(args,X,y):
+def prepare_bootstrap(args, X, y):
     """
     prepare bootstrap.
     Input: 
@@ -83,7 +91,7 @@ def prepare_bootstrap(args,X,y):
         - test_idx_set_dict: dictionary with key - rand_seed, val - sample index for test set 
 
     """
-    
+
     # split train and testing
     from sklearn.model_selection import train_test_split
     import random
@@ -91,7 +99,7 @@ def prepare_bootstrap(args,X,y):
     n_keep = 1
     n_try = 1
     test_idx_set_dict = {}
-    
+
     random.seed(a=args.init_seed, version=2)
     while n_keep <= args.number_of_bootstrapping:
         rand_seed = random.randrange(args.number_of_bootstrapping*10, )
@@ -106,13 +114,14 @@ def prepare_bootstrap(args,X,y):
             n_keep += 1
             test_idx_set_dict[rand_seed] = set(y_test.index)
         n_try += 1
-    return test_idx_set_dict 
+    return test_idx_set_dict
 
 ########################################################################
-## bootstrap: run 
+# bootstrap: run
 ########################################################################
 
-def run_bootstrap(args,X,y,test_idx_set_dict):
+
+def run_bootstrap(args, X, y, test_idx_set_dict):
     """
     run bootstrapping 
     output: 
@@ -125,7 +134,7 @@ def run_bootstrap(args,X,y,test_idx_set_dict):
     """
 
     import warnings
-    from sklearn.metrics import accuracy_score #confusion_matrix
+    from sklearn.metrics import accuracy_score  # confusion_matrix
     warnings.filterwarnings('ignore')
 
     log_grid = [{
@@ -138,17 +147,19 @@ def run_bootstrap(args,X,y,test_idx_set_dict):
     test_accuracy_scores = []
     model_tune_history = []
 
-    print(DATE(), "=== Starting {0} bootstraps ===".format(len(split_rand_seeds)))
+    print(DATE(), "=== Starting {0} bootstraps ===".format(
+        len(split_rand_seeds)))
     for i in range(len(split_rand_seeds)):
         if i % 5 == 0:
             print(DATE(), "running bootstrap #{}".format(i))
         rnd_seed = split_rand_seeds[i]
         test_idx_set = test_idx_set_dict[rnd_seed]
         train_idx_set = set(X.index) - test_idx_set
-        X_train = X.loc[train_idx_set]
-        y_train = y.loc[train_idx_set, ['label']]
-        X_test = X.loc[test_idx_set]
-        y_test = y.loc[test_idx_set, ['label']]
+        # print(train_idx_set)
+        X_train = X.loc[list(train_idx_set)]
+        y_train = y.loc[list(train_idx_set), ['label']]
+        X_test = X.loc[list(test_idx_set)]
+        y_test = y.loc[list(test_idx_set), ['label']]
 
         log_model = tune_elasticnet(X_train,
                                     y_train,
@@ -157,7 +168,7 @@ def run_bootstrap(args,X,y,test_idx_set_dict):
                                     n_core=10)
         model_tune_history.append(log_model)
 
-        #print("Best Parameters:\n", log_model.best_params_)
+        # print("Best Parameters:\n", log_model.best_params_)
 
         # Select best log model
         best_log = log_model.best_estimator_
@@ -166,10 +177,10 @@ def run_bootstrap(args,X,y,test_idx_set_dict):
         log_pred = best_log.predict(X_test)
         test_accuracy_scores.append(
             [log_model.best_score_,
-            accuracy_score(y_test, log_pred)])
+             accuracy_score(y_test, log_pred)])
         #     cm_log = confusion_matrix(y_test, log_pred)
 
-        #features
+        # features
         idx = np.where(np.ravel(best_log.coef_) != 0)
         features_list.append(
             pd.DataFrame({
@@ -177,7 +188,7 @@ def run_bootstrap(args,X,y,test_idx_set_dict):
                 "coef": np.ravel(best_log.coef_)[idx]
             }).sort_values('coef', ascending=False))
 
-    ## Result summarization 
+    # Result summarization
     print(DATE(), "=== Result summary ===")
 
     # store weights vector to dict
@@ -191,7 +202,7 @@ def run_bootstrap(args,X,y,test_idx_set_dict):
         for _, row in l.iterrows():
             feature_weight_dict[row['gene']][i] = row['coef']
 
-    # summarize the results 
+    # summarize the results
     df_feature_genes = pd.DataFrame({
         'gene': [g for g in feature_weight_dict.keys()],
         'counts': [np.sum(np.array(v) != 0) for v in feature_weight_dict.values()],
@@ -199,10 +210,11 @@ def run_bootstrap(args,X,y,test_idx_set_dict):
         'std_weight':
         [np.std(np.array(v)) * 100 for v in feature_weight_dict.values()],
     }).set_index('gene').sort_values('avg_weight', ascending=False)
-    
-    # save features 
-    os.makedirs('results',exist_ok=True)
-    df_feature_genes.sort_values('avg_weight').to_csv('results/bootstrap_features.csv')
+
+    # save features
+    os.makedirs('results', exist_ok=True)
+    df_feature_genes.sort_values('avg_weight').to_csv(
+        'results/bootstrap_features.csv')
     df_feature_genes[df_feature_genes.counts >= int(args.feature_selection_threshold*args.number_of_bootstrapping)].sort_values(
         'avg_weight').to_csv('results/bootstrap_features_selected.csv')
 
@@ -218,7 +230,8 @@ def run_bootstrap(args,X,y,test_idx_set_dict):
         pickle.dump(bootstrap_result_dict, open('results/bootstrap_result_dict.p', 'wb'),
                     pickle.HIGHEST_PROTOCOL)
 
-    return df_feature_genes,bootstrap_result_dict
+    return df_feature_genes, bootstrap_result_dict
+
 
 def plot_bootstrap_stats(bootstrap_result_dict):
     """
@@ -227,9 +240,9 @@ def plot_bootstrap_stats(bootstrap_result_dict):
     import matplotlib.pyplot as plt
     import seaborn as sns
 
-    ## accuracy 
-    test_accuracy_scores= bootstrap_result_dict['test_accuracy_scores']
-    features_list=bootstrap_result_dict['features_list']
+    # accuracy
+    test_accuracy_scores = bootstrap_result_dict['test_accuracy_scores']
+    features_list = bootstrap_result_dict['features_list']
     f, axs = plt.subplots(
         2,
         2,
@@ -238,8 +251,8 @@ def plot_bootstrap_stats(bootstrap_result_dict):
         gridspec_kw=dict(width_ratios=[3, 0.4]))
 
     ax = sns.scatterplot(x=list(range(len(test_accuracy_scores))),
-                        ax=axs[0, 0],
-                        y=[i[0] for i in test_accuracy_scores])
+                         ax=axs[0, 0],
+                         y=[i[0] for i in test_accuracy_scores])
 
     ax.set_ylim(0, 1.1)
     ax.set_ylabel('Train accuracy')
@@ -247,8 +260,8 @@ def plot_bootstrap_stats(bootstrap_result_dict):
     ax.set_facecolor('whitesmoke')
 
     ax = sns.scatterplot(x=list(range(len(test_accuracy_scores))),
-                        ax=axs[1, 0],
-                        y=[i[1] for i in test_accuracy_scores])
+                         ax=axs[1, 0],
+                         y=[i[1] for i in test_accuracy_scores])
 
     ax.set_ylim(0, 1.1)
     ax.set_ylabel('Test accuracy')
@@ -260,7 +273,7 @@ def plot_bootstrap_stats(bootstrap_result_dict):
     f.tight_layout()
     f.savefig('results/bootstrap_training_stats.png')
 
-    ## number of features 
+    # number of features
     f, axs = plt.subplots(
         1,
         2,
@@ -268,8 +281,8 @@ def plot_bootstrap_stats(bootstrap_result_dict):
         gridspec_kw=dict(width_ratios=[3, 0.4]))
 
     ax = sns.scatterplot(x=list(range(len(test_accuracy_scores))),
-                        ax=axs[0],
-                        y=list(map(len, features_list)))
+                         ax=axs[0],
+                         y=list(map(len, features_list)))
 
     ax.set_ylabel('#Features in best model')
     ax.set_yscale('log')
@@ -278,21 +291,24 @@ def plot_bootstrap_stats(bootstrap_result_dict):
     ax = sns.boxplot(y=list(map(len, features_list)), ax=axs[1])
     ax.set_facecolor('whitesmoke')
 
-    f.tight_layout()    
+    f.tight_layout()
     f.savefig('results/bootstrap_features_stats.png')
 
 ########################################################################
-## Main
+# Main
 ########################################################################
+
+
 def main():
     """
     main function
     """
     args = get_args()
-    X,y = read_data(args)
-    test_idx_set_dict = prepare_bootstrap(args,X,y)
-    _,bootstrap_result_dict = run_bootstrap(args,X,y,test_idx_set_dict)
+    X, y = read_data(args)
+    test_idx_set_dict = prepare_bootstrap(args, X, y)
+    _, bootstrap_result_dict = run_bootstrap(args, X, y, test_idx_set_dict)
     plot_bootstrap_stats(bootstrap_result_dict)
+
 
 if __name__ == "__main__":
     main()
